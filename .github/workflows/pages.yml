@@ -1,5 +1,9 @@
 name: Deploy GitHub Pages
 
+permissions:
+  contents: write    # allow pushing commits
+  pages: write       # allow updating GitHub Pages
+
 on:
   push:
     branches:
