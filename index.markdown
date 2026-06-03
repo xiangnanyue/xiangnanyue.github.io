@@ -5,9 +5,9 @@
 layout: home
 ---
 
-## 项目入口
+## 项目简介
 
-以下页面来自 `_posts` 目录，可点击查看：
+以下页面可点击查看：
 
 - [Agent热度选股]({{ '/_posts/Agent热度选股.html' | relative_url }})
 - [热点概念挖掘]({{ '/_posts/热点概念挖掘.html' | relative_url }})
