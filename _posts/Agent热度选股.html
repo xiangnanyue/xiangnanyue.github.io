@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent热度选股</title>
+  <style>
+    :root {
+      --ink: #182026;
+      --muted: #5f6872;
+      --line: #dfe5e7;
+      --paper: #f7f8f5;
+      --panel: #ffffff;
+      --teal: #087f7a;
+      --green: #4d8c57;
+      --coral: #d85c49;
+      --gold: #c9922f;
+      --blue: #326b9a;
+      --shadow: 0 12px 28px rgba(24, 32, 38, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      background:
+        linear-gradient(180deg, rgba(247, 248, 245, 0.96), rgba(240, 244, 241, 0.96)),
+        repeating-linear-gradient(90deg, rgba(24,32,38,.035) 0 1px, transparent 1px 72px);
+    }
+    .poster { width: min(1480px, calc(100% - 36px)); margin: 24px auto 36px; }
+    .hero {
+      min-height: 420px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+      gap: 28px;
+      align-items: stretch;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(8,127,122,.10), rgba(216,92,73,.08)), var(--panel);
+      box-shadow: var(--shadow);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .hero-copy { padding: 42px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
+    .eyebrow { display: inline-flex; width: fit-content; align-items: center; gap: 8px; color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--coral); display: inline-block; }
+    h1 { margin: 14px 0 16px; font-size: clamp(36px, 5vw, 76px); line-height: 1.06; letter-spacing: 0; max-width: 950px; }
+    .lead { margin: 0; color: #37414b; font-size: clamp(17px, 1.7vw, 24px); line-height: 1.65; max-width: 900px; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .pill { display: inline-flex; align-items: center; min-height: 34px; padding: 7px 12px; border: 1px solid rgba(24, 32, 38, 0.14); border-radius: 999px; background: rgba(255,255,255,.72); color: #2d363d; font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .hero-visual { position: relative; min-height: 420px; padding: 28px; display: grid; align-content: center; gap: 16px; background: linear-gradient(160deg, rgba(24,32,38,.88), rgba(24,32,38,.72)), linear-gradient(45deg, #ecf3ef, #fff7ed); color: #f5f7f4; }
+    .flow-map { display: grid; gap: 10px; }
+    .flow-row { display: grid; grid-template-columns: 116px 1fr; gap: 12px; align-items: stretch; }
+    .flow-label { border: 1px solid rgba(255,255,255,.22); padding: 12px; border-radius: 8px; font-weight: 800; color: #f6e8c4; min-height: 64px; display: flex; align-items: center; }
+    .flow-node { border: 1px solid rgba(255,255,255,.24); background: rgba(255,255,255,.08); padding: 12px; border-radius: 8px; min-height: 64px; }
+    .flow-node b { display: block; font-size: 15px; margin-bottom: 4px; color: #ffffff; }
+    .flow-node span { color: rgba(255,255,255,.76); font-size: 12px; line-height: 1.55; }
+    .section { margin-top: 24px; padding: 30px; border: 1px solid var(--line); background: rgba(255,255,255,.88); border-radius: 8px; box-shadow: var(--shadow); }
+    .section-title { display: flex; justify-content: space-between; gap: 18px; align-items: end; margin-bottom: 22px; }
+    h2 { margin: 0; font-size: clamp(24px, 2.4vw, 38px); letter-spacing: 0; }
+    .caption { margin: 6px 0 0; color: var(--muted); line-height: 1.6; font-size: 14px; max-width: 780px; }
+    .grid { display: grid; gap: 16px; }
+    .grid.kpi { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .grid.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .metric, .panel, .finding, .timeline-item { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .metric { padding: 18px; min-height: 126px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+    .metric .value { font-size: clamp(27px, 3vw, 42px); font-weight: 900; line-height: 1; letter-spacing: 0; }
+    .metric .label { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .metric.teal { border-top: 5px solid var(--teal); }
+    .metric.green { border-top: 5px solid var(--green); }
+    .metric.coral { border-top: 5px solid var(--coral); }
+    .metric.gold { border-top: 5px solid var(--gold); }
+    .metric.blue { border-top: 5px solid var(--blue); }
+    .metric.ink { border-top: 5px solid var(--ink); }
+    .panel { padding: 20px; min-height: 180px; }
+    .panel h3, .finding h3 { margin: 0 0 10px; font-size: 18px; letter-spacing: 0; }
+    .panel p, .finding p { margin: 0; color: #3d4650; line-height: 1.68; font-size: 14px; }
+    .io-list { display: grid; gap: 10px; margin-top: 14px; }
+    .io-row { display: grid; grid-template-columns: 92px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid #edf0f1; font-size: 14px; line-height: 1.55; }
+    .io-row b { color: var(--teal); }
+    code { font-family: Consolas, "Cascadia Mono", monospace; font-size: .92em; color: #1f4f68; background: #eef4f4; padding: 1px 5px; border-radius: 4px; }
+    .pipeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .stage { position: relative; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 18px; min-height: 238px; }
+    .stage::after { content: ""; position: absolute; top: 38px; right: -12px; width: 12px; height: 2px; background: var(--line); }
+    .stage:last-child::after { display: none; }
+    .stage-number { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 800; margin-bottom: 12px; }
+    .stage h3 { margin: 0 0 8px; font-size: 17px; }
+    .stage p { margin: 0; color: #4e5962; font-size: 13px; line-height: 1.65; }
+    .example { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid #edf0f1; color: #2f3b42; font-size: 12px; line-height: 1.55; }
+    .chart-wrap { border: 1px solid var(--line); border-radius: 8px; background: #fbfcfb; padding: 16px 16px 10px; }
+    #navChart { width: 100%; min-height: 342px; display: block; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; color: var(--muted); font-size: 13px; margin: 10px 4px 0; }
+    .legend i { display: inline-block; width: 28px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 999px; }
+    .bars { display: grid; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: 190px 1fr 42px; gap: 10px; align-items: center; color: #33404a; font-size: 13px; }
+    .bar-track { height: 10px; background: #edf1ef; border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--teal), var(--gold)); }
+    .reason-table { display: grid; gap: 10px; margin-top: 10px; }
+    .reason-row { display: grid; grid-template-columns: 112px 1fr 1.45fr; gap: 12px; padding: 12px 0; border-top: 1px solid #edf0f1; font-size: 13px; line-height: 1.55; }
+    .reason-row b { color: var(--teal); }
+    .finding { padding: 18px; border-left: 6px solid var(--gold); }
+    .finding.ok { border-left-color: var(--green); }
+    .finding.warn { border-left-color: var(--coral); }
+    .finding.info { border-left-color: var(--blue); }
+    .timeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .timeline-item { padding: 15px; min-height: 120px; }
+    .timeline-item b { display: block; color: var(--teal); margin-bottom: 8px; }
+    .timeline-item span { display: block; color: #3d4650; line-height: 1.55; font-size: 13px; }
+    .footnote { color: var(--muted); font-size: 12px; line-height: 1.7; margin-top: 18px; }
+    @media (max-width: 1120px) {
+      .hero, .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .grid.kpi { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .pipeline { grid-template-columns: 1fr; }
+      .stage::after { display: none; }
+      .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .poster { width: calc(100% - 18px); margin-top: 9px; }
+      .hero-copy, .hero-visual, .section { padding: 20px; }
+      .grid.kpi, .timeline { grid-template-columns: 1fr; }
+      .section-title { display: block; }
+      .bar-row, .reason-row { grid-template-columns: 1fr; gap: 5px; }
+      .io-row, .flow-row { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: #fff; }
+      .poster { width: 100%; margin: 0; }
+      .section, .hero { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="poster">
+    <section class="hero">
+      <div class="hero-copy">
+        <div>
+          <div class="eyebrow"><span class="dot"></span> LLM Agent for Concept Investing</div>
+          <h1>Agent热度选股</h1>
+          <p class="lead">
+            这是一个把研报检索、LLM 文本理解、A 股候选池、组合构建和月度回测串起来的多节点选股框架。
+            当前主线是 <b>Concept Agent</b>：先读懂一个市场主题，再拆出产业链线索、找到相关公司、形成组合并留下可复盘证据。
+          </p>
+        </div>
+        <div class="hero-meta">
+          <span class="pill">代码入口：<code>src/run.py</code></span>
+          <span class="pill">核心 Agent：<code>src/agent/concept_agent.py</code></span>
+          <span class="pill">生成脚本：<code>scripts/generate_project_poster.py</code></span>
+          <span class="pill">生成日期：2026-06-03</span>
+        </div>
+      </div>
+      <div class="hero-visual" aria-label="框架流程概览">
+        <div class="flow-map">
+          <div class="flow-row"><div class="flow-label">输入</div><div class="flow-node"><b>主题 + 时间点</b><span>单次模式输入一个主题和观察日期；月度模式逐月寻找当时最热的主题。</span></div></div>
+          <div class="flow-row"><div class="flow-label">理解</div><div class="flow-node"><b>先找材料，再让 LLM 概括</b><span>每一步都只看 as_of 当日前可获得的信息，避免把未来新闻带进历史回测。</span></div></div>
+          <div class="flow-row"><div class="flow-label">落地</div><div class="flow-node"><b>从主题落到股票</b><span>例如“AI算力链”会进一步落到服务器、芯片、光模块、PCB、液冷等公司线索。</span></div></div>
+          <div class="flow-row"><div class="flow-label">复盘</div><div class="flow-node"><b>结果不是一句话，而是一组文件</b><span>每个节点都有 JSON 产物，方便回看当时为什么选、选了什么、哪里失败。</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h2>一眼看懂</h2>
+          <p class="caption">这里汇总月度调仓、收益风险、主题分布和高频持仓，方便一眼看懂 Agent 选股框架的表现。</p>
+        </div>
+      </div>
+      <div class="grid kpi">
+        <div class="metric teal"><div class="value">41</div><div class="label">月度调仓点<br>2022-12-30 至 2026-04-24</div></div>
+        <div class="metric green"><div class="value">45.25%</div><div class="label">策略累计收益<br>净值 1.4525</div></div>
+        <div class="metric blue"><div class="value">23.19%</div><div class="label">沪深300累计收益<br>基准净值 1.2319</div></div>
+        <div class="metric gold"><div class="value">11.54%</div><div class="label">年化收益<br>年化超额 5.84%</div></div>
+        <div class="metric coral"><div class="value">-39.73%</div><div class="label">最大回撤<br>主题策略波动明显</div></div>
+        <div class="metric ink"><div class="value">204</div><div class="label">Concept Agent 历史运行<br>manifest 状态为 ok</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h2>输入输出契约</h2>
+          <p class="caption">框架的关键价值在于“把 LLM 放进可审计的契约里”：每个节点都有统一结构、引用来源、状态和错误字段。</p>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="panel">
+          <h3>运行输入</h3>
+          <p>单次概念选股与月度回测共用同一套 Agent 基础设施，但调度层不同。</p>
+          <div class="io-list">
+            <div class="io-row"><b>单次</b><span><code>python -m src.run --concept "人形机器人" --as-of 2026-04-30</code></span></div>
+            <div class="io-row"><b>月度</b><span><code>python -m src.run --monthly --start 2022-12-30 --end 2026-04-24</code></span></div>
+            <div class="io-row"><b>数据</b><span>研报检索、公司资料、行情估值、Wind 指数和个股日线。</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>运行输出</h3>
+          <p>产物按运行和月份落盘，既能复盘单个概念，也能重放历史净值。</p>
+          <div class="io-list">
+            <div class="io-row"><b>节点</b><span><code>planner.json</code>、<code>node_expander.json</code>、<code>portfolio_builder.json</code>、<code>audit_report.json</code></span></div>
+            <div class="io-row"><b>追踪</b><span><code>manifest.json</code> 记录节点状态和耗时；<code>trace.json</code> 记录关键查询和 LLM 调用。</span></div>
+            <div class="io-row"><b>回测</b><span><code>monthly_result.json</code>、<code>backtest_summary.json</code>、<code>nav_series.csv</code>。</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h2>Agent 在哪里发挥作用</h2>
+          <p class="caption">下面尽量用“人话”描述每一环：它们共同完成从市场热点到股票组合的翻译工作。</p>
+        </div>
+      </div>
+      <div class="pipeline">
+        <div class="stage">
+          <div class="stage-number">1</div>
+          <h3>找当月热门主题</h3>
+          <p>先看近三个月研报和观点，找出市场正在反复讨论、且能落到股票上的主题。</p>
+          <span class="example">例：2026-04 选出“AI算力链”和“锂电产业链”。</span>
+        </div>
+        <div class="stage">
+          <div class="stage-number">2</div>
+          <h3>把大主题拆小</h3>
+          <p>一个主题太大，Agent 会把它拆成几个更容易查证的方向。</p>
+          <span class="example">例：“AI算力链”拆成服务器、光模块、AI芯片、PCB、液冷。</span>
+        </div>
+        <div class="stage">
+          <div class="stage-number">3</div>
+          <h3>从方向找到公司</h3>
+          <p>每个方向继续查材料，找到业务确实相关的 A 股公司，并记录为什么相关。</p>
+          <span class="example">例：服务器方向可能出现中科曙光；光模块方向可能出现中际旭创。</span>
+        </div>
+        <div class="stage">
+          <div class="stage-number">4</div>
+          <h3>合并成组合</h3>
+          <p>把两个主题下的候选股票合并去重，按相关性排序，最多保留 30 只并做等权。</p>
+          <span class="example">例：30 只股票时，大多数权重为 3% 或 4%，总权重保持 100%。</span>
+        </div>
+        <div class="stage">
+          <div class="stage-number">5</div>
+          <h3>写复盘说明</h3>
+          <p>最后把选择逻辑、主要风险和信心程度整理成报告，方便人工检查。</p>
+          <span class="example">例：看好数据中心投资，但提示订单兑现、估值回落和竞争加剧风险。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h2>历史回测画像</h2>
+          <p class="caption">净值图已补入 1.0 起始点。原始 <code>nav_series.csv</code> 的第一行已经包含首个持有期收益，但日期仍写首个调仓日，所以直接画会看起来“不是从 1 起步”。</p>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="chart-wrap">
+          <svg id="navChart" viewBox="0 0 900 360" role="img" aria-label="策略净值与沪深300净值曲线"></svg>
+          <div class="legend">
+            <span><i style="background: var(--teal)"></i>策略净值</span>
+            <span><i style="background: var(--coral)"></i>沪深300</span>
+            <span><i style="background: var(--gold)"></i>持仓数量柱</span>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>绩效摘录</h3>
+          <div class="io-list">
+            <div class="io-row"><b>收益</b><span>累计收益 45.25%，年化收益 11.54%，年化超额 5.84%。</span></div>
+            <div class="io-row"><b>风险</b><span>年化波动 32.66%，最大回撤 -39.73%，Sharpe 0.3535。</span></div>
+            <div class="io-row"><b>超额</b><span>信息比率 0.2449，月度超额胜率 46.34%，跟踪误差 23.82%。</span></div>
+            <div class="io-row"><b>组合</b><span>平均持仓 19.95 只，最多 30 只；39/41 个月约束有效。</span></div>
+            <div class="io-row"><b>异常月</b><span>2024-03-29、2025-06-30 组合为空或约束未通过。</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h2>热点与持仓足迹</h2>
+          <p class="caption">结果显示策略主线明显偏科技成长和政策主题：AIGC、算力、半导体、设备更新、人形机器人等反复出现。</p>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="panel">
+          <h3>被选中次数最多的概念</h3>
+          <div class="bars"><div class="bar-row"><span>大规模设备更新</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><b>4</b></div>
+<div class="bar-row"><span>半导体自主可控</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><b>4</b></div>
+<div class="bar-row"><span>AI赋能游戏开发</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>2</b></div>
+<div class="bar-row"><span>算力升级</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>2</b></div>
+<div class="bar-row"><span>国产算力</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>2</b></div>
+<div class="bar-row"><span>新质生产力</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>2</b></div>
+<div class="bar-row"><span>AI算力升级</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>2</b></div>
+<div class="bar-row"><span>人型机器人</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>2</b></div></div>
+        </div>
+        <div class="panel">
+          <h3>持仓频次最高股票</h3>
+          <div class="bars"><div class="bar-row"><span>603019.SH 中科曙光</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><b>24</b></div>
+<div class="bar-row"><span>300308.SZ 中际旭创</span><div class="bar-track"><div class="bar-fill" style="width:71%"></div></div><b>17</b></div>
+<div class="bar-row"><span>688256.SH 寒武纪</span><div class="bar-track"><div class="bar-fill" style="width:62%"></div></div><b>15</b></div>
+<div class="bar-row"><span>688041.SH 海光信息</span><div class="bar-track"><div class="bar-fill" style="width:58%"></div></div><b>14</b></div>
+<div class="bar-row"><span>002230.SZ 科大讯飞</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>12</b></div>
+<div class="bar-row"><span>603986.SH 兆易创新</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><b>12</b></div>
+<div class="bar-row"><span>688012.SH 中微公司</span><div class="bar-track"><div class="bar-fill" style="width:46%"></div></div><b>11</b></div>
+<div class="bar-row"><span>300750.SZ 宁德时代</span><div class="bar-track"><div class="bar-fill" style="width:46%"></div></div><b>11</b></div></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h3>代表性月份与原因推断</h3>
+        <div class="reason-table">
+          <div class="reason-row"><b>最佳超额</b><span>2023-02-28：月收益 22.85%，超额 23.31%。主题为 AIGC与国产大模型、信创产业链。</span><span>推断：ChatGPT 引发的 AI 主线在 2023 年初迅速扩散，软件、算力、信创相关股票弹性大；同期沪深300略跌，放大了超额。</span></div>
+          <div class="reason-row"><b>强反弹</b><span>2024-01-31：月收益 22.24%，超额 12.89%。主题为 AIGC应用落地、算力升级。</span><span>推断：前期调整后的 TMT 与算力资产集中修复，AI 应用和国产算力叙事增强，组合相对宽基更偏高弹性成长。</span></div>
+          <div class="reason-row"><b>最大拖累</b><span>2023-06-30：月收益 -10.88%，超额 -15.36%。当月持仓 17 只。</span><span>推断：AI/游戏/传媒链在前期上涨后回撤，风险偏好降温；而沪深300当期上涨 4.48%，主题组合和基准方向相反。</span></div>
+          <div class="reason-row"><b>最新一期</b><span>2026-04-24：选中 AI算力链、锂电产业链，30 只等权，月收益 -0.54%。</span><span>推断：这是不完整持有期，回测逻辑近似同日买卖，收益主要体现换手成本；不宜和完整月份直接比较。</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const navData = [{"date":"2022-12-30 起点","s":1.0,"b":1.0,"m":0.0,"e":0.0,"h":0},{"date":"2022-12-30","s":1.1497,"b":1.0737,"m":14.97,"e":7.61,"h":13},{"date":"2023-01-31","s":1.1208,"b":1.0511,"m":-2.51,"e":-0.41,"h":11},{"date":"2023-02-28","s":1.377,"b":1.0463,"m":22.85,"e":23.31,"h":9},{"date":"2023-03-31","s":1.4355,"b":1.0407,"m":4.25,"e":4.79,"h":14},{"date":"2023-04-28","s":1.3388,"b":0.9811,"m":-6.73,"e":-1.01,"h":28},{"date":"2023-05-31","s":1.2659,"b":0.9925,"m":-5.45,"e":-6.61,"h":23},{"date":"2023-06-30","s":1.1281,"b":1.0369,"m":-10.88,"e":-15.36,"h":17},{"date":"2023-07-31","s":1.0959,"b":0.9725,"m":-2.86,"e":3.35,"h":26},{"date":"2023-08-31","s":1.0504,"b":0.953,"m":-4.15,"e":-2.13,"h":16},{"date":"2023-09-28","s":0.9961,"b":0.9227,"m":-5.18,"e":-2.0,"h":16},{"date":"2023-10-31","s":1.0535,"b":0.903,"m":5.77,"e":7.91,"h":26},{"date":"2023-11-30","s":1.047,"b":0.8862,"m":-0.62,"e":1.24,"h":15},{"date":"2023-12-29","s":0.8651,"b":0.8305,"m":-17.37,"e":-11.08,"h":16},{"date":"2024-01-31","s":1.0576,"b":0.9082,"m":22.24,"e":12.89,"h":30},{"date":"2024-02-29","s":1.0681,"b":0.9137,"m":1.0,"e":0.39,"h":20},{"date":"2024-03-29","s":1.0617,"b":0.931,"m":-0.6,"e":-2.49,"h":0},{"date":"2024-04-30","s":1.0378,"b":0.9247,"m":-2.25,"e":-1.57,"h":28},{"date":"2024-05-31","s":0.9848,"b":0.8941,"m":-5.11,"e":-1.81,"h":24},{"date":"2024-06-28","s":0.9965,"b":0.8891,"m":1.2,"e":1.76,"h":21},{"date":"2024-07-31","s":0.9339,"b":0.8579,"m":-6.29,"e":-2.78,"h":29},{"date":"2024-08-30","s":1.1581,"b":1.0378,"m":24.02,"e":3.05,"h":25},{"date":"2024-09-30","s":1.2237,"b":1.005,"m":5.66,"e":8.81,"h":13},{"date":"2024-10-31","s":1.2757,"b":1.0116,"m":4.25,"e":3.6,"h":29},{"date":"2024-11-29","s":1.2137,"b":1.0163,"m":-4.86,"e":-5.33,"h":27},{"date":"2024-12-31","s":1.1708,"b":0.9859,"m":-3.54,"e":-0.54,"h":23},{"date":"2025-01-27","s":1.2507,"b":1.0048,"m":6.82,"e":4.91,"h":23},{"date":"2025-02-28","s":1.1738,"b":1.004,"m":-6.15,"e":-6.08,"h":26},{"date":"2025-03-31","s":1.0732,"b":0.9739,"m":-8.57,"e":-5.57,"h":16},{"date":"2025-04-30","s":1.0485,"b":0.9919,"m":-2.3,"e":-4.15,"h":30},{"date":"2025-05-30","s":1.0954,"b":1.0166,"m":4.47,"e":1.97,"h":29},{"date":"2025-06-30","s":1.0888,"b":1.0527,"m":-0.6,"e":-4.14,"h":0},{"date":"2025-07-31","s":1.3172,"b":1.1615,"m":20.97,"e":10.64,"h":23},{"date":"2025-08-29","s":1.3664,"b":1.1986,"m":3.74,"e":0.54,"h":11},{"date":"2025-09-30","s":1.3402,"b":1.1986,"m":-1.91,"e":-1.91,"h":27},{"date":"2025-10-31","s":1.2571,"b":1.1692,"m":-6.2,"e":-3.75,"h":23},{"date":"2025-11-28","s":1.3622,"b":1.1959,"m":8.36,"e":6.08,"h":13},{"date":"2025-12-31","s":1.5296,"b":1.2156,"m":12.29,"e":10.64,"h":10},{"date":"2026-01-30","s":1.5992,"b":1.2167,"m":4.55,"e":4.46,"h":15},{"date":"2026-02-27","s":1.4263,"b":1.1494,"m":-10.81,"e":-5.28,"h":17},{"date":"2026-03-31","s":1.4603,"b":1.2319,"m":2.38,"e":-4.79,"h":26},{"date":"2026-04-24","s":1.4525,"b":1.2319,"m":-0.54,"e":-0.54,"h":30}];
+    function drawChart() {
+      const svg = document.getElementById("navChart");
+      const w = 900, h = 360;
+      const pad = {l: 54, r: 28, t: 22, b: 42};
+      const xs = navData.map((_, i) => pad.l + i * ((w - pad.l - pad.r) / (navData.length - 1)));
+      const vals = navData.flatMap(d => [d.s, d.b]);
+      const minY = Math.min(...vals) - 0.04;
+      const maxY = Math.max(...vals) + 0.06;
+      const y = v => pad.t + (maxY - v) * ((h - pad.t - pad.b) / (maxY - minY));
+      const barBase = h - pad.b;
+      const barMax = 74;
+      const barW = Math.max(4, (w - pad.l - pad.r) / navData.length * 0.56);
+      const line = key => navData.map((d, i) => `${i === 0 ? "M" : "L"} ${xs[i].toFixed(2)} ${y(d[key]).toFixed(2)}`).join(" ");
+      const yTicks = [0.8, 1.0, 1.2, 1.4, 1.6];
+      let chart = "";
+      chart += `<rect x="0" y="0" width="${w}" height="${h}" rx="8" fill="#fbfcfb"/>`;
+      yTicks.forEach(t => {
+        const yy = y(t);
+        chart += `<line x1="${pad.l}" y1="${yy}" x2="${w - pad.r}" y2="${yy}" stroke="#e5ebe8" stroke-width="1"/>`;
+        chart += `<text x="${pad.l - 12}" y="${yy + 4}" text-anchor="end" fill="#6a747c" font-size="12">${t.toFixed(1)}</text>`;
+      });
+      navData.forEach((d, i) => {
+        const bh = d.h / 30 * barMax;
+        chart += `<rect x="${xs[i] - barW / 2}" y="${barBase - bh}" width="${barW}" height="${bh}" fill="rgba(201,146,47,.26)" rx="2"/>`;
+      });
+      chart += `<path d="${line("b")}" fill="none" stroke="#d85c49" stroke-width="3" stroke-linejoin="round"/>`;
+      chart += `<path d="${line("s")}" fill="none" stroke="#087f7a" stroke-width="4" stroke-linejoin="round"/>`;
+      const labelIndexes = [0, 13, 25, 37, navData.length - 1];
+      const labelTexts = ["2022-12", "2023-12", "2024-12", "2025-12", "2026-04"];
+      labelIndexes.forEach((idx, pos) => {
+        chart += `<line x1="${xs[idx]}" y1="${h - pad.b + 6}" x2="${xs[idx]}" y2="${h - pad.b + 12}" stroke="#aeb8bb"/>`;
+        chart += `<text x="${xs[idx]}" y="${h - 12}" text-anchor="middle" fill="#6a747c" font-size="12">${labelTexts[pos]}</text>`;
+      });
+      const last = navData[navData.length - 1];
+      const lastX = xs[xs.length - 1];
+      chart += `<circle cx="${lastX}" cy="${y(last.s)}" r="5" fill="#087f7a"/>`;
+      chart += `<text x="${lastX - 8}" y="${y(last.s) - 12}" text-anchor="end" fill="#087f7a" font-size="13" font-weight="700">策略 ${last.s}</text>`;
+      chart += `<circle cx="${lastX}" cy="${y(last.b)}" r="5" fill="#d85c49"/>`;
+      chart += `<text x="${lastX - 8}" y="${y(last.b) + 20}" text-anchor="end" fill="#d85c49" font-size="13" font-weight="700">基准 ${last.b}</text>`;
+      svg.innerHTML = chart;
+    }
+    drawChart();
+  </script>
+</body>
+</html>
