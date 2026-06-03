@@ -5,7 +5,7 @@
 layout: home
 ---
 
-## Selected Works
+## Works
 
 以下页面可点击查看：
 
