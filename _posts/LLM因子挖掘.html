@@ -104,6 +104,19 @@
     th { background: #f8fafc; color: #475569; font-weight: 900; }
     tr:last-child td { border-bottom: none; }
     .delta-up { color: var(--green); font-weight: 900; }
+
+    .candidate-stats { margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .stat-card { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); box-shadow: 0 10px 22px rgba(23,32,51,.06); }
+    .stat-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 5px; background: linear-gradient(90deg, var(--violet), var(--blue)); }
+    .stat-card.strong::before { background: linear-gradient(90deg, var(--ink), var(--green)); }
+    .stat-head { padding: 18px 18px 10px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .stat-head h3 { margin: 0; font-size: 17px; }
+    .stat-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 68px; padding: 6px 10px; border-radius: 999px; color: #1e3a8a; background: #eff6ff; font-size: 13px; font-weight: 950; white-space: nowrap; }
+    .stat-card.strong .stat-badge { color: #065f46; background: #ecfdf5; }
+    .stat-grid { padding: 0 18px 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .stat-item { padding: 12px; border: 1px solid #e8eef5; border-radius: 8px; background: rgba(255,255,255,.78); }
+    .stat-label { display: block; color: var(--muted); font-size: 12px; font-weight: 800; line-height: 1.35; }
+    .stat-value { display: block; margin-top: 6px; color: var(--ink); font-size: 24px; line-height: 1; font-weight: 950; letter-spacing: -.01em; }
     .warn { color: var(--orange); font-weight: 900; }
     .formula { margin-top: 12px; padding: 14px; border-radius: 8px; background: #0f172a; color: #dbeafe; font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; line-height: 1.7; overflow: auto; white-space: pre-line; }
     .finding { padding: 20px; border-left: 5px solid var(--cyan); }
@@ -129,6 +142,8 @@
       .hero-copy, .hero-visual, .section { padding: 22px; }
       .flow-row, .io-row { grid-template-columns: 1fr; }
       .grid.kpi, .pipeline { grid-template-columns: 1fr; }
+
+      .candidate-stats, .stat-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -279,6 +294,33 @@
             </table>
           </div>
           <p class="caption">阈值从 0.85 放宽到 0.90 后，候选池增加 13 个因子；池内相关系数整体上升，但仍被约束在各自阈值以内。</p>
+
+          <div class="candidate-stats" aria-label="两个相关性阈值下的因子候选池统计">
+            <div class="stat-card">
+              <div class="stat-head">
+                <h3>阈值 0.85 因子候选池统计</h3>
+                <span class="stat-badge">corr &lt; 0.85</span>
+              </div>
+              <div class="stat-grid">
+                <div class="stat-item"><span class="stat-label">|rank_ic| 均值</span><span class="stat-value">0.0363</span></div>
+                <div class="stat-item"><span class="stat-label">|rankicir| 日均值</span><span class="stat-value">0.4757</span></div>
+                <div class="stat-item"><span class="stat-label">头部年化超额 均值</span><span class="stat-value">0.0309</span></div>
+                <div class="stat-item"><span class="stat-label">多空年化 均值</span><span class="stat-value">0.2657</span></div>
+              </div>
+            </div>
+            <div class="stat-card strong">
+              <div class="stat-head">
+                <h3>阈值 0.90 因子候选池统计</h3>
+                <span class="stat-badge">corr &lt; 0.90</span>
+              </div>
+              <div class="stat-grid">
+                <div class="stat-item"><span class="stat-label">|rank_ic| 均值</span><span class="stat-value">0.0390</span></div>
+                <div class="stat-item"><span class="stat-label">|rankicir| 日均值</span><span class="stat-value">0.5306</span></div>
+                <div class="stat-item"><span class="stat-label">头部年化超额 均值</span><span class="stat-value">0.0780</span></div>
+                <div class="stat-item"><span class="stat-label">多空年化 均值</span><span class="stat-value">0.3315</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
